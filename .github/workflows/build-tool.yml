@@ -56,12 +56,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Get Build Version
-        if: startsWith(github.ref, 'refs/heads/release') ||  startsWith(github.ref, 'refs/heads/hotfix') 
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          Write-Host $Env:GITHUB_REF
-          $version =  $Env:GITHUB_REF.replace('refs/heads/release/','')
-          echo "BUILD_VERSION=$version" >> $Env:GITHUB_ENV
-          Write-Host $Env:BUILD_VERSION
+          tag_version="${GITHUB_REF#refs/tags/}"
+          echo "Detected Version from Tag: $tag_version"
+          echo "VERSION=$tag_version" >> $GITHUB_ENV
         shell: pwsh
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -77,3 +76,24 @@ jobs:
         with:
           name: "nioscli-${{ matrix.goos }}-${{ matrix.goarch }}"
           path: ".bin/${{ matrix.goarch }}/${{ matrix.goos }}/"
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "Release ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+
+      - name: Upload Build Binaries to Release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: .bin/${{ matrix.goarch }}/${{ matrix.goos }}/$BINARY_NAME
+          asset_name: "nioscli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.binary_ext }}"
+          asset_content_type: application/octet-stream
