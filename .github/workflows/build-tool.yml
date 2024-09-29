@@ -80,6 +80,7 @@ jobs:
           path: ".bin/${{ matrix.goarch }}/${{ matrix.goos }}/"
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/hotfix')
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
