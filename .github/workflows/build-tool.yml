@@ -1,0 +1,79 @@
+name: Build Tool
+
+on:
+  create:
+      branches:
+        - release/**
+        
+  push:
+      branches:
+        - main
+        - development 
+      paths-ignore:
+        - 'docs/**'
+        - 'README.md'
+        - 'LICENSE'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }} - ${{ matrix.arch }}
+    strategy:
+      matrix:
+        os: [linux, windows, darwin, freebsd]
+        arch: [amd64, 386]
+        include:
+          - os: linux
+            goos: linux
+            goarch: amd64
+          - os: linux
+            goos: linux
+            goarch: 386
+          - os: windows
+            goos: windows
+            goarch: amd64
+            binary_ext: ".exe"
+          - os: windows
+            goos: windows
+            goarch: 386
+            binary_ext: ".exe"
+          - os: darwin
+            goos: darwin
+            goarch: amd64
+          - os: freebsd
+            goos: freebsd
+            goarch: amd64
+          - os: freebsd
+            goos: freebsd
+            goarch: 386
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+      VERSION: "latest"
+      OUTPUT_DIR: ".bin"
+      BINARY_NAME: "nioscli${{ matrix.binary_ext }}"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Get Build Version
+        if: startsWith(github.ref, 'refs/heads/release') ||  startsWith(github.ref, 'refs/heads/hotfix') 
+        run: |
+          Write-Host $Env:GITHUB_REF
+          $version =  $Env:GITHUB_REF.replace('refs/heads/release/','')
+          echo "BUILD_VERSION=$version" >> $Env:GITHUB_ENV
+          Write-Host $Env:BUILD_VERSION
+        shell: pwsh
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.19"
+
+      - name: Build binary
+        run: make build VERSION=${{ env.VERSION }}
+
+      - name: Archive build artifacts
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: "nioscli-${{ matrix.goos }}-${{ matrix.goarch }}"
+          path: ".bin/${{ matrix.goarch }}/${{ matrix.goos }}/"
