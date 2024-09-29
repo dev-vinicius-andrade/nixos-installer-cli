@@ -1,5 +1,6 @@
 name: Build Tool
-
+permissions:
+  contents: write
 on:
   create:
       branches:
