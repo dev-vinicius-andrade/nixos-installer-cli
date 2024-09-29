@@ -48,8 +48,6 @@ jobs:
             goos: freebsd
             goarch: 386
     env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
       VERSION: "latest"
       OUTPUT_DIR: ".bin"
       BINARY_NAME: "nioscli${{ matrix.binary_ext }}"
@@ -70,14 +68,14 @@ jobs:
           go-version: "1.23"
 
       - name: Build binary
-        run: make build VERSION=${{ env.VERSION }}
+        run: make build_all
 
       - name: Archive build artifacts
         if: success()
         uses: actions/upload-artifact@v3
         with:
-          name: "nioscli-${{ matrix.goos }}-${{ matrix.goarch }}"
-          path: ".bin/${{ matrix.goarch }}/${{ matrix.goos }}/"
+          name: "nioscli-binaries"
+          path: .bin/  # Archive all binaries generated under the .bin directory
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/hotfix')
         id: create_release
@@ -97,6 +95,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: .bin/${{ matrix.goarch }}/${{ matrix.goos }}/$BINARY_NAME
-          asset_name: "nioscli-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.binary_ext }}"
+          asset_path: .bin/
+          asset_name: "nioscli-binaries-${{ env.VERSION }}.tar.gz"
           asset_content_type: application/octet-stream
